@@ -27,3 +27,7 @@ Program ini tetap menggunakan protokol WebSocket yang sama.
 Pada sisi Client, protokol ini didefinisikan secara eksplisit pada awalan (scheme) URI koneksinya, yaitu awalan ws:// pada string "ws://127.0.0.1:8080".
 
 Pada sisi Server, protokol ini tidak didefinisikan melalui string URL, melainkan diterapkan dengan cara menerima koneksi Transmission Control Protocol (TCP) biasa, lalu melakukan upgrade koneksi tersebut menjadi jalur WebSocket menggunakan fungsi ServerBuilder::new().accept(socket) dari library tokio-websockets.
+
+## Experiment 2.3
+![alt text](assets/experiment2.3.png)
+Pada eksperimen ini, saya menambahkan informasi IP dan Port pengirim pada setiap pesan chat. Modifikasi ini dilakukan di sisi server (server.rs).  Ketika server menerima pesan dari klien (msg.as_text()), server sudah memiliki informasi IP dan Port klien tersebut melalui variabel addr: SocketAddr. Saya membuat variabel baru formatted_msg menggunakan makro format!("{}: {}", addr, text).  Alasan modifikasi diletakkan di server adalah agar server menjadi pusat kendali bentuk data (single source of truth). Dengan memodifikasi pesannya sebelum masuk ke fungsi bcast_tx.send(), secara otomatis semua klien yang melakukan subscribe ke channel tersebut akan menerima pesan yang sudah berisi identitas pengirim tanpa perlu mengubah logika ekstraksi (parsing) data di sisi klien.
