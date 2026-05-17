@@ -1,0 +1,10 @@
+[package]
+name = "chat-async"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+futures-util = { version = "0.3", features = ["sink"] }
+tokio = { version = "1.28", features = ["full"] }
+tokio-websockets = { version = "0.4", features = ["client", "server", "fastrand", "sha1_smol"] }
+http = "0.2"
