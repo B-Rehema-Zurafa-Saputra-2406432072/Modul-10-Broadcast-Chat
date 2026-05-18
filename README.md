@@ -31,3 +31,19 @@ Pada sisi Server, protokol ini tidak didefinisikan melalui string URL, melainkan
 ## Experiment 2.3
 ![alt text](assets/experiment2.3.png)
 Pada eksperimen ini, saya menambahkan informasi IP dan Port pengirim pada setiap pesan chat. Modifikasi ini dilakukan di sisi server (server.rs).  Ketika server menerima pesan dari klien (msg.as_text()), server sudah memiliki informasi IP dan Port klien tersebut melalui variabel addr: SocketAddr. Saya membuat variabel baru formatted_msg menggunakan makro format!("{}: {}", addr, text).  Alasan modifikasi diletakkan di server adalah agar server menjadi pusat kendali bentuk data (single source of truth). Dengan memodifikasi pesannya sebelum masuk ke fungsi bcast_tx.send(), secara otomatis semua klien yang melakukan subscribe ke channel tersebut akan menerima pesan yang sudah berisi identitas pengirim tanpa perlu mengubah logika ekstraksi (parsing) data di sisi klien.
+
+## Bonus
+Untuk membuat server Rust (chat-async/server.rs) bekerja menggantikan server JavaScript (SimpleWebsocketServer), saya harus mengubah server Rust dari "penerus raw string" menjadi server berbasis JSON yang memiliki state.
+
+Saya menambahkan struct bawaan serde (WebSocketMessage, MsgTypes, MessageData) pada server Rust agar identik dengan struktur di frontend Yew.
+
+Saya menambahkan fitur Shared State menggunakan Arc<Mutex<HashMap<SocketAddr, String>>> untuk melacak username dari setiap koneksi yang aktif (berdasarkan IP/Port).
+
+Saat klien mengirimkan message_type: "register", server Rust akan menyimpan nama mereka ke HashMap, lalu mem-broadcast pesan Users yang berisi seluruh nama agar sidebar daftar teman di frontend Yew diperbarui secara real-time.
+
+Saat klien mengirimkan obrolan atau payload dari game Arena, server Rust membongkar pesan tersebut, membungkusnya ke dalam struct MessageData (memasukkan nama pengirim dan isi pesannya), mengubahnya kembali menjadi string JSON, lalu menyebarkannya.
+
+Perubahan ini berhasil karena server Rust sekarang mampu mereplikasi logika internal Node.js tanpa harus memodifikasi satu baris kode pun di bagian klien YewChat. Frontend tidak menyadari bahwa backend-nya telah diganti dari JavaScript ke Rust. Sistem keluar-masuk pemain (disconnect) juga diurus secara aman karena memori hashmap dibersihkan saat fungsi ws_stream.next() tidak menerima input lagi.
+
+Opini Saya (JavaScript vs Rust):
+Meskipun implementasi JavaScript (Node.js) lebih singkat dan cepat ditulis karena sifat datanya yang dynamically typed (bisa menerima bentuk JSON apa saja secara otomatis), saya lebih memilih versi Rust. Menggunakan Rust pada arsitektur Full-Stack (Yew di frontend dan Tokio di backend) memberikan keamanan tipe data (strict typing). Saya bisa meletakkan struct WebSocketMessage yang sama persis di kedua sisi. Jika ada payload yang tidak sesuai format, program akan menolak mem-parse JSON-nya sejak fase compile atau runtime deserialization, sehingga mencegah terjadinya malfungsi logika pada saat dijalankan. Selain itu, kecepatan konkuren dari Tokio melampaui kemampuan single-threaded event-loop milik Node.js.
